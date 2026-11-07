@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>鯨 KUJIRA · 5 秒代码动画（手绘风）</title>
+<link rel="icon" href="data:,">
+<style>
+  html, body { margin: 0; height: 100%; background: #0c0d14; color: #e8e6f0; font: 13px/1.4 -apple-system, "PingFang SC", system-ui, sans-serif; overflow: hidden; }
+  #stage { position: fixed; inset: 0 0 52px 0; display: flex; align-items: center; justify-content: center; }
+  #frame { position: relative; aspect-ratio: 16 / 9; width: min(100vw, calc((100vh - 52px) * 16 / 9)); }
+  #frame canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #big { position: absolute; left: 50%; top: 50%; width: 92px; height: 92px; margin: -46px 0 0 -46px; border-radius: 50%; border: 0;
+         background: rgba(12, 14, 30, .55); color: #fff; font-size: 34px; cursor: pointer; backdrop-filter: blur(6px); transition: opacity .25s; }
+  #big:hover { background: rgba(12, 14, 30, .75); }
+  body.playing #big { opacity: 0; pointer-events: none; }
+  #ui { position: fixed; left: 0; right: 0; bottom: 0; height: 52px; display: flex; gap: 14px; align-items: center; padding: 0 18px; background: #14151f; box-sizing: border-box; }
+  #ui button { width: 40px; height: 32px; background: #262838; color: inherit; border: 1px solid #383a52; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  #ui input[type=range] { flex: 1; accent-color: #5aa8ff; }
+  #lbl { width: 56px; text-align: right; font-variant-numeric: tabular-nums; color: #a9a8bc; }
+  #ui label { color: #a9a8bc; display: flex; gap: 6px; align-items: center; }
+  .credit { color: #6f6e86; }
+  body.headless #ui, body.headless #big { display: none; }
+  body.headless #stage { inset: 0; }
+  body.headless #frame { width: 100vw; }
+</style>
+</head>
+<body>
+<div id="stage"><div id="frame"><canvas id="c"></canvas><canvas id="title"></canvas><button id="big" title="播放（空格）">▶</button></div></div>
+<div id="ui">
+  <button id="play" title="播放 / 暂停（空格）">▶</button>
+  <input id="scrub" type="range" min="0" max="119" value="0" title="逐帧：← →">
+  <span id="lbl">0.00 s</span>
+  <label><input id="loop" type="checkbox" checked>循环</label>
+  <span class="credit">three.js r170 · 画面与声音全部实时由代码生成</span>
+</div>
+<script type="text/plain" id="three-src">%%THREE%%</script>
+<script type="module">
+const THREE = await import(URL.createObjectURL(new Blob([document.getElementById('three-src').textContent], { type: 'text/javascript' })));
+const GLSL = %%GLSL%%;
+%%CODE%%
+</script>
+</body>
+</html>
