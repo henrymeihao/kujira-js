@@ -67,6 +67,7 @@ function renderFrame(n) {
   whale.pose(st.pose);
   const rv = env.seaU.uRing.value;
   boat.update(st, BOAT_AT, deg(-35), { x: rv.x, y: rv.y, z: rv.z, w: rv.w });
+  env.seaU.uBoat.value.set(BOAT_AT.x, BOAT_AT.y, deg(-35), 1);
   fx.update(st);
   gulls.update(st);
   scene.updateMatrixWorld(true);

@@ -20,28 +20,36 @@ function buildFx(scene, whale) {
   // droplets: precomputed seeded launches (birth, origin, velocity, size)
   const rng = new Rng(7);
   const drops = [];
-  const BREACH_N = 420, CRASH_N = 900, CLOUD_N = 110;
+  const BREACH_N = 700, CRASH_N = 1500, CLOUD_N = 110;
+  // sizes: mostly fine spray, some drops, a few heavy gobs of water
+  const dropSize = (lo, hi) => { const k = rng.next(); return k < 0.6 ? rng.range(0.04, 0.11) : k < 0.94 ? rng.range(lo * 0.7, hi * 0.5) : rng.range(hi * 0.5, hi * 0.85); };
   for (let i = 0; i < BREACH_N; i++) {
     const tb = CUES.breach + rng.range(-0.05, 1.3) * rng.range(0.3, 1), a = rng.range(0, Math.PI * 2), r = rng.range(6, 14);
     const sp = rng.range(10, 30);
-    drops.push({ tb, o: [X0 + 13 + Math.cos(a) * r, 0, Z0 + Math.sin(a) * r], v: [Math.cos(a) * sp * 0.35, sp * rng.range(0.9, 1.6), Math.sin(a) * sp * 0.35], s: rng.range(0.12, 0.5), body: rng.next() < 0.35 ? rng.range(0.15, 0.85) : -1 });
+    drops.push({ tb, o: [X0 + 13 + Math.cos(a) * r, 0, Z0 + Math.sin(a) * r], v: [Math.cos(a) * sp * 0.35, sp * rng.range(0.9, 1.6), Math.sin(a) * sp * 0.35], s: dropSize(0.15, 0.5), sq: rng.range(0.7, 1.3), body: rng.next() < 0.35 ? rng.range(0.15, 0.85) : -1 });
   }
   for (let i = 0; i < CRASH_N; i++) {
     const tb = CRASH_AT.t + rng.range(0, 0.6) * rng.next(), a = rng.range(0, Math.PI * 2), r = rng.range(8, 34);
     const sp = rng.range(16, 44);
-    drops.push({ tb, o: [CRASH_AT.x + Math.cos(a) * r, 0, CRASH_AT.z + Math.sin(a) * r * 0.6], v: [Math.cos(a) * sp * 0.45, sp * rng.range(0.8, 1.5), Math.sin(a) * sp * 0.45 + 4], s: rng.range(0.15, 0.85), body: -1 });
+    drops.push({ tb, o: [CRASH_AT.x + Math.cos(a) * r, 0, CRASH_AT.z + Math.sin(a) * r * 0.6], v: [Math.cos(a) * sp * 0.45, sp * rng.range(0.8, 1.5), Math.sin(a) * sp * 0.45 + 4], s: dropSize(0.2, 0.85), sq: rng.range(0.7, 1.3), body: -1 });
   }
-  const dropGeo = new THREE.IcosahedronGeometry(1, 1);
-  const dropMesh = new THREE.InstancedMesh(dropGeo, celMat('#ffffff', 63, { mode: 1 }), drops.length);
-  dropMesh.frustumCulled = false; scene.add(dropMesh);
+  // drops and spray are drawn shapes on camera-facing cards (glsl/blob_*), each with its own outline
+  const blobs = (n, kind, id, seeds) => {
+    const g = new THREE.PlaneGeometry(2, 2);
+    g.setAttribute('aVel', new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3));
+    g.setAttribute('aSeed', new THREE.InstancedBufferAttribute(new Float32Array(seeds), 2));
+    const m = new THREE.InstancedMesh(g, shaderMat('blob_vs', 'blob_fs', { ...U, uKind: { value: kind }, uId: { value: id } }, { side: THREE.DoubleSide }), n);
+    m.frustumCulled = false; scene.add(m); return m;
+  };
+  const dropMesh = blobs(drops.length, 0, 103, drops.flatMap((d) => [rng.next(), d.s > 0.3 ? rng.range(0.4, 1) : rng.range(0, 0.3)]));
+  const dropVel = dropMesh.geometry.attributes.aVel;
   // spray clouds: big slow cel puffs (no ink) rolling out of the crash
   const clouds = [];
   for (let i = 0; i < CLOUD_N; i++) {
     const a = rng.range(0, Math.PI * 2), r = rng.range(5, 40);
     clouds.push({ tb: CRASH_AT.t + rng.range(0.05, 0.5), o: [CRASH_AT.x + Math.cos(a) * r, rng.range(0, 6), CRASH_AT.z + Math.sin(a) * r * 0.6], v: [Math.cos(a) * rng.range(3, 12), rng.range(6, 22), Math.sin(a) * rng.range(3, 10) + 6], s: rng.range(4, 10) });
   }
-  const cloudMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 4), celMat('#ffffff', 101, { mode: 1 }), CLOUD_N);
-  cloudMesh.frustumCulled = false; scene.add(cloudMesh);
+  const cloudMesh = blobs(CLOUD_N, 1, 104, clouds.flatMap(() => [rng.next(), 0]));
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Sv = new THREE.Vector3(), Pv = new THREE.Vector3(), tmp = new THREE.Vector3();
   const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
   return {
@@ -69,12 +77,14 @@ function buildFx(scene, whale) {
         }
         const s = d.s * (1 - smooth(invLerp(1.4, 2.6, tau))) * (Pv.y < -1 ? 0 : 1);
         const vy = d.v[1] + GRAV * tau;
-        // stretch along the fall a bit: drawn drops are teardrops
-        Q.setFromUnitVectors(new THREE.Vector3(0, 1, 0), tmp.set(d.v[0], vy, d.v[2]).normalize());
-        Sv.set(s, s * (1 + Math.min(1.5, Math.abs(vy) * 0.04)), s);
+        // the card stretches into a teardrop along the drop's motion on screen (blob_vs)
+        const k = d.body >= 0 ? 0.25 : 1;
+        dropVel.setXYZ(i, d.v[0] * k, vy, d.v[2] * k);
+        Q.identity(); Sv.setScalar(s);
         M.compose(Pv, Q, Sv); dropMesh.setMatrixAt(i, M);
       });
       dropMesh.instanceMatrix.needsUpdate = true;
+      dropVel.needsUpdate = true;
       clouds.forEach((c, i) => {
         const tau = t - c.tb;
         if (tau < 0) { cloudMesh.setMatrixAt(i, ZERO); return; }

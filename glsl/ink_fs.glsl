@@ -41,5 +41,7 @@ void main(){
   float e = 0.5 * edgeAt(vUv, dC, nC, w) + 0.5 * edgeAt(vUv, dC, nC, w * 0.55);
   float alpha = e * (0.82 + 0.18 * vnoise(fc / 7.0 + uSeed));
   vec3 inkc = mix(uInk, col.rgb * vec3(0.42, 0.40, 0.48), 0.6);
+  // water (splash sheets) is outlined in a clear blue line, the way painted water is
+  if(dC.a > 59.5 && dC.a < 63.5) inkc = mix(vec3(0.24, 0.50, 0.68), col.rgb, 0.25);
   o = vec4(mix(col.rgb, inkc, clamp(alpha, 0.0, 1.0)), 1.0);
 }

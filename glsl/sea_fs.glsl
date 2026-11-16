@@ -5,6 +5,7 @@ uniform vec4 uFoam;     // x z radius amount (white water around the whale)
 uniform vec4 uRing;     // x z radius height (crash ring)
 uniform vec4 uShadow;   // x z length strength (the whale under the surface)
 uniform vec2 uShadowDir;
+uniform vec4 uBoat;     // x z heading on (the fishing boat sitting in the water)
 #include common
 #include mrt
 varying vec3 vWorld; varying vec3 vNW; varying vec3 vNV; varying float vDepth;
@@ -60,6 +61,22 @@ void main(){
   float f = clamp(foam + ring, 0.0, 1.0);
   vec3 foamC = mix(vec3(0.74, 0.90, 0.94), vec3(1.0, 0.995, 0.97), step(0.0, dot(n, uKey) - 0.2 + fn * 0.3));
   col = mix(col, foamC, f);
+  // the boat in the water: a darker shade under its lee side, a broken collar of white water at the hull,
+  // a few rings of ripple pushed out by the rocking
+  if(uBoat.w > 0.5){
+    vec2 dq2 = p - uBoat.xy;
+    float ch = cos(uBoat.z), shd = sin(uBoat.z);
+    vec2 bl = vec2(ch * dq2.x - shd * dq2.y, shd * dq2.x + ch * dq2.y);   // boat-local x (bow +), z (beam)
+    // waterline footprint: the V hull is ~70% of its deck beam at the water, and the raked stem leaves it near x = 5.2
+    float bx = clamp((bl.x + 0.2) / 5.4, -1.0, 1.0);
+    float hb = 1.2 * mix(0.84, 1.0, smoothstep(-1.0, -0.2, bx)) * sqrt(max(0.0, 1.0 - max(bx, 0.0) * max(bx, 0.0)));
+    float out_ = max(abs(bl.y) - hb, 0.0) + max(abs(bl.x + 0.2) - 5.4, 0.0);
+    float bn = vnoise(bl * vec2(1.4, 2.2) + uDraw * 3.0);
+    col *= 1.0 - 0.22 * smoothstep(2.4, 0.0, out_ + bn * 0.6) * step(0.0, bl.y + 0.6);
+    float collar = step(out_ + (bn - 0.5) * 0.35, 0.16) * step(0.35, vnoise(bl * vec2(2.5, 4.0) - uDraw * 2.0) + smoothstep(0.12, 0.0, out_));
+    float rip = step(abs(fract(out_ * 0.55 - uDraw * 0.6) - 0.5), 0.05) * smoothstep(5.0, 1.0, out_) * step(0.45, bn) * step(0.6, out_);
+    col = mix(col, foamC, clamp(collar + rip * 0.7, 0.0, 1.0));
+  }
   // haze into the horizon
   col = mix(col, vec3(0.74, 0.86, 0.94), smoothstep(400.0, 2400.0, dist));
   writeOut(col, normalize(vNV), vDepth, 0.0);

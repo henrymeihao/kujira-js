@@ -10,6 +10,14 @@ void main(){
   if(!gl_FrontFacing) n = -n;
   vec3 v = normalize(cameraPosition - vWorld);
   vec3 base = uColor;
+  if(uMode > 1.5){
+    // window glass: dark below, sky toward the top, one diagonal glint across the pane
+    vec3 g = mix(uColor, vec3(0.50, 0.68, 0.86), smoothstep(-0.25, 0.35, vLocal.y));
+    float band = vLocal.y * 1.5 + vLocal.z * 1.1 + vLocal.x * 1.1;
+    g = mix(g, vec3(0.93, 0.97, 1.0), step(abs(band - 0.08), 0.05) * 0.8);
+    writeOut(g, normalize(mat3(viewMatrix) * n), vDepth, uId);
+    return;
+  }
   if(uMode > 0.5){
     // water: white crests over cyan shade, slightly translucent-looking core
     float ndl = dot(n, uKey);

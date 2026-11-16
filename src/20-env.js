@@ -25,7 +25,8 @@ function buildEnv(scene) {
   const g = new THREE.PlaneGeometry(2, 2, 360, 360);
   const seaU = { ...U, uBulge: { value: new THREE.Vector4(WHALE_AT.x, WHALE_AT.y, 20, 0) }, uRing: { value: new THREE.Vector4(WHALE_AT.x, WHALE_AT.y, 0, 0) },
     uCenter: { value: WHALE_AT.clone() }, uFoam: { value: new THREE.Vector4(WHALE_AT.x, WHALE_AT.y, 0, 0) },
-    uShadow: { value: new THREE.Vector4(WHALE_AT.x, WHALE_AT.y, 30, 0) }, uShadowDir: { value: new THREE.Vector2(1, 0) } };
+    uShadow: { value: new THREE.Vector4(WHALE_AT.x, WHALE_AT.y, 30, 0) }, uShadowDir: { value: new THREE.Vector2(1, 0) },
+    uBoat: { value: new THREE.Vector4(0, 0, 0, 0) } };
   const sea = new THREE.Mesh(g, shaderMat('sea_vs', 'sea_fs', seaU, { side: THREE.DoubleSide }));
   sea.frustumCulled = false;
   scene.add(sea);
