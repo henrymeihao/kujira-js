@@ -15,9 +15,9 @@ const lin = (x) => x;
 function poseAt(t) {
   const tt = onTwos(t);
   return {
-    head: new THREE.Vector3(track(W_KEYS.x, tt), track(W_KEYS.y, tt), Z0),
-    pitch: deg(track(W_KEYS.pitch, tt)), yaw: deg(90), roll: track(W_KEYS.roll, tt),
-    bend: track(W_KEYS.bend, tt), flap: track(W_KEYS.flap, tt),
+    head: new THREE.Vector3(spline(W_KEYS.x, tt), spline(W_KEYS.y, tt), Z0),
+    pitch: deg(spline(W_KEYS.pitch, tt)), yaw: deg(90), roll: spline(W_KEYS.roll, tt),
+    bend: spline(W_KEYS.bend, tt), flap: spline(W_KEYS.flap, tt),
     stroke: 0.25 + 0.2 * smooth(invLerp(2.6, 3.2, tt)), phase: tt * 0.9,
   };
 }
@@ -29,7 +29,7 @@ const CAMS = {
     const shake = Math.exp(-Math.max(0, t - CUES.breach) * 2.2) * 0.35;
     return {
       pos: [20 + noise1(t * 9, 1) * shake, 2.2 + noise1(t * 9, 2) * shake, 6],
-      look: track([[0, [2, 12, -70]], [0.45, [0, 24, -70]], [0.8, [-2, 26, -70]], [1, [-8, 18, -70]]], k),
+      look: spline([[0, [2, 12, -70]], [0.45, [0, 24, -70]], [0.8, [-2, 26, -70]], [1, [-8, 18, -70]]], k),
       fov: lerp(42, 46, smooth(invLerp(0.5, 1, k))),
     };
   },

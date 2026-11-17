@@ -32,6 +32,19 @@ function track(keys, t) {
   }
   return keys[keys.length - 1][1];
 }
+// the same keys through a smooth curve: speed carries through inner keys, eases in and out at the ends
+function spline(keys, t) {
+  if (Array.isArray(keys[0][1])) return keys[0][1].map((_, c) => spline(keys.map(([kt, kv]) => [kt, kv[c]]), t));
+  const n = keys.length;
+  if (t <= keys[0][0]) return keys[0][1];
+  if (t >= keys[n - 1][0]) return keys[n - 1][1];
+  let i = 1;
+  while (t > keys[i][0]) i++;
+  const slope = (j) => (j === 0 || j === n - 1 ? 0 : (keys[j + 1][1] - keys[j - 1][1]) / (keys[j + 1][0] - keys[j - 1][0]));
+  const [t0, v0] = keys[i - 1], [t1, v1] = keys[i];
+  const h = t1 - t0, u = (t - t0) / h, u2 = u * u, u3 = u2 * u;
+  return (2 * u3 - 3 * u2 + 1) * v0 + (u3 - 2 * u2 + u) * h * slope(i - 1) + (3 * u2 - 2 * u3) * v1 + (u3 - u2) * h * slope(i);
+}
 function noise1(x, seed = 0) {
   const h = (n) => { const s = Math.sin(n * 127.1 + seed * 311.7) * 43758.5453; return s - Math.floor(s); };
   const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
@@ -39,7 +52,7 @@ function noise1(x, seed = 0) {
 }
 
 // story beats (film seconds); picture and sound both key off these
-const CUES = { bulge: 0.55, call: 0.35, breach: 1.5, apex: 2.75, crash: 3.7, white: 4.05, title: 4.2, end: 5 };
+const CUES = { bulge: 0.55, call: 0.35, breach: 1.5, apex: 2.75, crash: 3.7, white: 4.25, title: 4.4, end: 5 };
 const SHOTS = [
   { id: 'calm', start: 0, end: 1.5 },
   { id: 'breach', start: 1.5, end: 3.7 },
